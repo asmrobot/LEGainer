@@ -5,6 +5,12 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LEGainer", "LEGainer\LEGainer.csproj", "{2B69D296-6E63-49A6-8ECA-E20D40CF0D17}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ACMESharp", "ACMESharp", "{EC232ED6-B603-40F9-BF6E-C8D0B59F9358}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ACMESharp", "..\libs\ACMESharp\ACMESharp\ACMESharp\ACMESharp.csproj", "{D551234B-0A8D-4DEE-8178-A81998DF0EDB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ACMESharp.Vault", "..\libs\ACMESharp\ACMESharp\ACMESharp.Vault\ACMESharp.Vault.csproj", "{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +21,20 @@ Global
 		{2B69D296-6E63-49A6-8ECA-E20D40CF0D17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B69D296-6E63-49A6-8ECA-E20D40CF0D17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B69D296-6E63-49A6-8ECA-E20D40CF0D17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D551234B-0A8D-4DEE-8178-A81998DF0EDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D551234B-0A8D-4DEE-8178-A81998DF0EDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D551234B-0A8D-4DEE-8178-A81998DF0EDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D551234B-0A8D-4DEE-8178-A81998DF0EDB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D551234B-0A8D-4DEE-8178-A81998DF0EDB} = {EC232ED6-B603-40F9-BF6E-C8D0B59F9358}
+		{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6} = {EC232ED6-B603-40F9-BF6E-C8D0B59F9358}
 	EndGlobalSection
 EndGlobal

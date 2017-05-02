@@ -1,0 +1,3 @@
+[submodule "libs/ACMESharp"]
+	path = libs/ACMESharp
+	url = https://github.com/ebekker/ACMESharp.git
