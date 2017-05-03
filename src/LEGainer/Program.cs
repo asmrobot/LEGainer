@@ -6,24 +6,227 @@ using System.Threading.Tasks;
 using LEGainer.Utils;
 using ACMESharp.Vault.Model;
 using System.IO;
-
+using ZTImage.Log;
+using ACMESharp;
 
 namespace LEGainer
 {
     class Program
     {
 
-        public static Guid Initialize()
+        static void Main(string[] args)
+        {
+            Trace.EnableConsole();
+            Trace.EnableFile();
+
+            if (!CheckParmeter())
+            {
+                return;
+            }
+            Trace.Info("check config ok!~");
+
+            InitializeVault();
+            Trace.Info("init vault ok!~");
+
+            try
+            {
+                ACMESharpUtils.NewRegistration("", new string[] { "mailto:" + Config.Mail }, true);
+            }
+            catch(Exception ex)
+            {
+                Trace.Error("registration error", ex);
+                return;
+            }
+            Trace.Info("registration ok!~");
+
+            try
+            {
+                ACMESharpUtils.NewIdentifier("dns1", Config.Domain);
+            }
+            catch (Exception ex)
+            {
+                Trace.Error("newidentityfier error", ex);
+                return;
+            }
+            Trace.Info("newidentityfier ok!~");
+
+            try
+            {
+                AuthorizationState state = ACMESharpUtils.CompleteChallenge("dns1", "http-01", "manual");
+                if (!CreateChallengeFile(state))
+                {
+                    Trace.Error("create challenge file erro");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.Error("complete challenge error",ex);
+                return;
+            }
+            Trace.Info("challege ok");
+
+            try
+            {
+                ACMESharpUtils.SubmitChallenge("dns1", "http-01");
+            }
+            catch (Exception ex)
+            {
+                Trace.Error("submit challenge error",ex);
+                return;
+            }
+            Trace.Info("submit challage ok!~");
+
+            Trace.Info("wait LE identifier");
+            DateTime startT = DateTime.Now;
+            bool result = false;
+            while ((DateTime.Now-startT).TotalSeconds<300)
+            {
+                AuthorizationState state = null;
+                try
+                {
+                    state = ACMESharpUtils.UpdateIdentifier("dns1", "http-01");
+                }
+                catch(Exception ex)
+                {
+                    Trace.Error("update identifier error");
+                    return;
+                }
+                if (state == null)
+                {
+                    Trace.Error("update identifier state is null");
+                    return;
+                }
+                
+                var subResultState = state.Challenges.First<ACMESharp.AuthorizeChallenge>(item => item.Type == "http-01");
+                if (subResultState == null)
+                {
+                    SaveState(state);
+                    Trace.Error("state is null");
+                    return;
+                }
+
+                if (subResultState.Status.Equals("valid", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    result = true;
+                    break;
+                }
+                else if (subResultState.Status.Equals("invalid", StringComparison.CurrentCultureIgnoreCase))
+                {
+                    SaveState(state);
+                    Trace.Error("state is invalid");
+                    return;
+                }
+                else
+                {
+                    Trace.Info(DateTime.Now.ToString("HH:mm:ss") + ",status is:" + subResultState.Status);
+                }
+                System.Threading.Thread.Sleep(5000);
+            }
+            if (!result)
+            {
+                Trace.Error("update identifer timeout");
+                return;
+            }
+            Trace.Info("update identifier ok!~");
+
+            try
+            {
+                ACMESharpUtils.NewCertificate("cert1", "dns1", null);
+            }
+            catch(Exception)
+            {
+                Trace.Error("new certificate erro");
+                return;
+            }
+            Trace.Info("new certificate is ok!~");
+
+            try
+            {
+                ACMESharpUtils.SubmitCertificate("cert1");
+            }
+            catch (Exception ex)
+            {
+                Trace.Error("submit certificateerro");
+                return;
+            }
+            Trace.Info("submit certificate is ok!~");
+
+            try
+            {
+                CertificateInfo info = ACMESharpUtils.UpdateCertificate("cert1");
+            }
+            catch(Exception ex)
+            {
+                Trace.Error("update certificate erro");
+                return;
+            }
+            Trace.Info("update certificate is ok!~");
+
+            if (!GenericCertificate())
+            {
+                return;
+            }
+            
+            Trace.Info("success!~Enter press any key exit!~");
+            Console.ReadKey();
+        }
+
+        /// <summary>
+        /// 验证配置
+        /// </summary>
+        /// <returns></returns>
+        private static bool CheckParmeter()
+        {
+            if (string.IsNullOrEmpty(Config.Mail))
+            {
+                Trace.Error("mail is not null!~");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(Config.Domain))
+            {
+                Trace.Error("domain is null");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(Config.WebDir))
+            {
+                Trace.Error("webdir is null");
+                return false;
+            }
+
+            if (!Directory.Exists(Config.WebDir))
+            {
+                Trace.Error("webdir is not exists");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(Config.CertificateSaveDir))
+            {
+                Trace.Error("certificate save dir is null");
+                return false;
+            }
+            if (!Directory.Exists(Config.CertificateSaveDir))
+            {
+                Trace.Error("certificate save dir is not exists");
+                return false;
+            }
+            return true; 
+        }
+        
+        /// <summary>
+        /// 初始化vault
+        /// </summary>
+        public static void InitializeVault()
         {
             string baseuri = ACMESharpUtils.WELL_KNOWN_BASE_SERVICES[ACMESharpUtils.WELL_KNOWN_LE];
-            Guid id = ACMESharp.Vault.Util.EntityHelper.NewId();
             using (var vlt = ACMESharpUtils.GetVault())
             {
-                Console.WriteLine("Initializing Storage Backend");
                 vlt.InitStorage(true);
                 var v = new VaultInfo
                 {
-                    Id = id,
+                    Id = ACMESharp.Vault.Util.EntityHelper.NewId(),
                     Alias = "ztimage",
                     Label = string.Empty,
                     Memo = string.Empty,
@@ -33,87 +236,88 @@ namespace LEGainer
                 };
                 vlt.SaveVault(v);
             }
-            return id;
         }
 
-        const string Domain = "centi.ztimage.com";
-        const string WebPath = "E:\\WebSite\\centi.ztimage.com";
-
-
-        static void Main(string[] args)
+        /// <summary>
+        /// 创建站点验证文件
+        /// </summary>
+        /// <returns></returns>
+        private static bool CreateChallengeFile(AuthorizationState state)
         {
-            Guid id = Initialize();
-            ACMESharp.AcmeRegistration registration = ACMESharpUtils.NewRegistration("", new string[] { "mailto:asmrobot@hotmail.com" }, true);
-            ACMESharp.AuthorizationState state = ACMESharpUtils.NewIdentifier("dns1", Domain);
 
-            ACMESharp.AuthorizationState completeState = ACMESharpUtils.CompleteChallenge("dns1", "http-01", "manual");
-
-            var challenge = completeState.Challenges.First<ACMESharp.AuthorizeChallenge>(item => item.Type == "http-01");
+            var challenge = state.Challenges.First<ACMESharp.AuthorizeChallenge>(item => item.Type == "http-01");
             if (challenge == null)
             {
-                Console.WriteLine("失败");
-                return;
+                Trace.Error("不存在 http-01节点");
+                return false;
             }
-            ACMESharp.ACME.HttpChallenge httpChallenge=challenge.Challenge as ACMESharp.ACME.HttpChallenge;
+
+            ACMESharp.ACME.HttpChallenge httpChallenge = challenge.Challenge as ACMESharp.ACME.HttpChallenge;
             if (httpChallenge == null)
             {
-                Console.WriteLine("失败");
-                return;
+                Trace.Error("不存在http-01 内容节点");
+                return false;
             }
 
-            string savePath = Path.Combine(WebPath, httpChallenge.FilePath);
-            string dir = savePath.Substring(0, savePath.LastIndexOf('/'));
-            if (!Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-            using (var file = File.OpenWrite(savePath))
-            {
-                byte[] data = System.Text.Encoding.ASCII.GetBytes(httpChallenge.FileContent);
-                file.Write(data, 0, data.Length);
-            }
-
-            ACMESharp.AuthorizationState submitState=ACMESharpUtils.SubmitChallenge("dns1", "http-01");
+            string savePath = Path.Combine(Config.WebDir, httpChallenge.FilePath);
             
-            while (true)
+            string dir = savePath.Substring(0, savePath.LastIndexOfAny(new char[] { '/' ,'\\'}));
+            try
             {
-                ACMESharp.AuthorizationState identifierState = ACMESharpUtils.UpdateIdentifier("dns1", "http-01");
-                //using (var stream = File.Open("e:\\log.txt",FileMode.Append))
-                //{
-                //    identifierState.Save(stream);
-                //}
-
-                var subResultState = identifierState.Challenges.First<ACMESharp.AuthorizeChallenge>(item => item.Type == "http-01");
-                if (subResultState == null)
+                if (!Directory.Exists(dir))
                 {
-                    Console.WriteLine("失败");
-                    return;
+                    Directory.CreateDirectory(dir);
                 }
-
-                if (subResultState.Status.Equals("valid",StringComparison.CurrentCultureIgnoreCase))
+                using (var file = File.OpenWrite(savePath))
                 {
-                    Console.WriteLine("success");
-                    break;
+                    byte[] data = System.Text.Encoding.ASCII.GetBytes(httpChallenge.FileContent);
+                    file.Write(data, 0, data.Length);
                 }
-                System.Threading.Thread.Sleep(30000);
             }
-
-            ACMESharpUtils.NewCertificate("cert1", "dns1",null);
-
-            ACMESharpUtils.SubmitCertificate("cert1");
-
-            CertificateInfo info=ACMESharpUtils.UpdateCertificate("cert1");
-
-            ACMESharpUtils.GetCertificate("cert1", "E:\\a.pem", "e:\\b.csr.pem");
-
-            Console.WriteLine("ok");
-            //using (var file = File.OpenWrite("d:\\state.log"))
-            //{
-            //    completeState.Save(file);
-            //}
-            Console.ReadKey();
+            catch (Exception ex)
+            {
+                Trace.Error("创建站点验证文件失败", ex);
+                return false;
+            }
+            
+            return true;
         }
 
+        /// <summary>
+        /// 生成证书
+        /// </summary>
+        /// <returns></returns>
+        private static bool GenericCertificate()
+        {
+            string savePathPrefix = Config.CertificateSaveDir;
+            if (!savePathPrefix.EndsWith("\\") && !savePathPrefix.EndsWith("/"))
+            {
+                savePathPrefix += Path.DirectorySeparatorChar + Config.Domain + "_";
+            }
+            try
+            {
+                ACMESharpUtils.GetCertificate("cert1", savePathPrefix+"key.pem", savePathPrefix+"csr.pem", savePathPrefix+"certificate.pem", savePathPrefix+"certificate.der", savePathPrefix+"issuer.pem", savePathPrefix+"issuer.der", savePathPrefix+"pkcs12.pfx", Config.PFXPassword,overwrite:true);
+            }
+            catch(Exception ex)
+            {
+                Trace.Error("生成证书失败!~", ex);
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 保存状态
+        /// </summary>
+        /// <param name="state"></param>
+        private static void SaveState(AuthorizationState state)
+        {
+            string logFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt");
+            using (var stream = File.OpenWrite(logFile))
+            {
+                state.Save(stream);
+            }
+        }
         
     }
 }
