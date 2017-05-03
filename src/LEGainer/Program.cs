@@ -13,7 +13,6 @@ namespace LEGainer
 {
     class Program
     {
-
         static void Main(string[] args)
         {
             Trace.EnableConsole();
@@ -134,9 +133,9 @@ namespace LEGainer
             {
                 ACMESharpUtils.NewCertificate("cert1", "dns1", null);
             }
-            catch(Exception)
+            catch(Exception ex)
             {
-                Trace.Error("new certificate erro");
+                Trace.Error("new certificate erro",ex);
                 return;
             }
             Trace.Info("new certificate is ok!~");
@@ -147,7 +146,7 @@ namespace LEGainer
             }
             catch (Exception ex)
             {
-                Trace.Error("submit certificateerro");
+                Trace.Error("submit certificateerro",ex);
                 return;
             }
             Trace.Info("submit certificate is ok!~");
@@ -158,7 +157,7 @@ namespace LEGainer
             }
             catch(Exception ex)
             {
-                Trace.Error("update certificate erro");
+                Trace.Error("update certificate erro",ex);
                 return;
             }
             Trace.Info("update certificate is ok!~");
@@ -168,8 +167,12 @@ namespace LEGainer
                 return;
             }
             
-            Trace.Info("success!~Enter press any key exit!~");
-            Console.ReadKey();
+            Trace.Info("success!~");
+            if (Environment.UserInteractive)
+            {
+                Trace.Info("Enter press any key exit!~");
+                Console.ReadKey();
+            }
         }
 
         /// <summary>
