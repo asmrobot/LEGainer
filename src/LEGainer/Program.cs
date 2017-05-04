@@ -300,6 +300,15 @@ namespace LEGainer
             try
             {
                 ACMESharpUtils.GetCertificate("cert1", savePathPrefix+"key.pem", savePathPrefix+"csr.pem", savePathPrefix+"certificate.pem", savePathPrefix+"certificate.der", savePathPrefix+"issuer.pem", savePathPrefix+"issuer.der", savePathPrefix+"pkcs12.pfx", Config.PFXPassword,overwrite:true);
+                string chinapem = savePathPrefix + "chain.pem";
+                if (File.Exists(chinapem))
+                {
+                    File.Delete(chinapem);
+                }
+                string content = string.Empty;
+                content = File.ReadAllText(savePathPrefix + "certificate.pem")+"\r\n";
+                content += File.ReadAllText(savePathPrefix + "issuer.pem");
+                File.WriteAllText(chinapem, content);
             }
             catch(Exception ex)
             {
