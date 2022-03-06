@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>LEGainer - Nginx SSL证书设置 - 免费在线申请SSL证书</title>
+    <meta name="description" content="Nginx SSL证书设置,LEGainer" />
+    <link rel="stylesheet" type="text/css" href="/css/main.css" />
+</head>
+<body>
+    <div class="header">
+        <div class="header-container">
+            <span class="title"><a href="/">免费在线申请SSL证书</a></span>
+            <div class="nav"><a href="/settings/nginx.html">Nginx设置证书方法</a></div>
+            <!--<div class="nav"><a href="#">Apache设置证书方法</a></div>
+            <div class="nav"><a href="#">IIS设置证书方法</a></div>-->
+            <div class="clear"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="setting-info">
+            <h1 style="text-align: center;">Nginx SSL证书设置</h1>
+            <h4>一、证书获取</h4>
+            <p style="margin-left: 30px;">使用 <a href="https://ssl.ztimage.com" target="_blank">https://ssl.ztimage.com</a> 在线获取Let's Encrypt提供的免费证书。成功申请到证书后，下载下来的文件夹中Nginx文件夹里保存的就是本次设置需要的crt公钥和key私钥文件了，如果是从其它渠道获取的证书文件则需要准备这两个公钥和私钥文件。</p>
+            <h4>二、Nginx SSL模块支持</h4>
+            <p style="margin-left: 30px;">通过命令查看nginx 编译时是否已经配置了SSL模块，命令：# nginx -V</p>
+            <p style="margin-left: 30px;">如果出现&ldquo;OpendSSL&rdquo;字样则说明已经编译进了SSL模块，直接进入第三步。</p>
+            <p style="margin-left: 30px;"><img src="https://img2020.cnblogs.com/blog/42104/202012/42104-20201224122824166-1852073413.png" alt="" loading="lazy" /></p>
+            <p style="margin-left: 30px;">&nbsp;如果未包含SSL模块可按以下步骤编译源码</p>
+            <h5 style="margin-left: 60px;">1.下载源码</h5>
+            <h5 style="margin-left: 60px;">2.配置&nbsp;</h5>
+            <p style="margin-left: 90px;">#./configure --prefix=/usr/local<br />&nbsp;--prefix=/usr/local/nginx<br />&nbsp;--with-http_ssl_module<br />&nbsp;--with-file-aio<br />&nbsp;--with-http_realip_module<br />&nbsp;--with-http_stub_status_module</p>
+            <h5 style="margin-left: 60px;">3.编译和安装</h5>
+            <p style="margin-left: 60px;">注意：如果你的nginx正在提供服务千万不要使用　make install，否则会覆盖安装</p>
+            <p style="margin-left: 90px;"># make</p>
+            <p style="margin-left: 90px;">//停止服务并备份<br /># nginx stop<br /># cp /usr/local/nginx/sbin/nginx /usr/local/nginx/sbin/nginx.bak</p>
+            <p style="margin-left: 90px;">//使用新编译的程序<br /># cp /objs/nginx /usr/local/nginx/sbin/<br /># nginx -V<br /># nginx</p>
+            <p>&nbsp;</p>
+            <h4>三、配置文件修改</h4>
+            <p style="margin-left: 30px;">打开nginx的站点配置文件，在需要配置ssl证书的站点中添加以下配置信息：</p>
+            <p style="margin-left: 60px;">listen 443 ssl;</p>
+            <p style="margin-left: 60px;">ssl_certificate /usr/certs/cert.crt;<br />ssl_certificate_key  /usr/certs/private.key;<br />ssl_protocols TLSv1 TLSv1.1 TLSv1.2;<br />ssl_session_cache    shared:SSL:1m;<br />ssl_session_timeout  5m;</p>
+            <p style="margin-left: 60px;">ssl_ciphers  HIGH:!aNULL:!MD5;<br />ssl_prefer_server_ciphers  on;</p>
+            <p style="margin-left: 30px;">现在站点配置看起来像这样:</p>
+            <p style="margin-left: 30px;">&nbsp;<img src="https://img2020.cnblogs.com/blog/42104/202012/42104-20201224133729288-468311877.png" alt="" loading="lazy" /></p>
+            <p style="margin-left: 30px;">其中ssl_certificate设置的是公钥文件路径，ssl_certificate_key设置的是私钥文件路径</p>
+            <p style="margin-left: 30px;">保存修改，测试一下我们的配置是否有问题</p>
+            <p style="margin-left: 60px;"># nginx -t</p>
+            <p style="margin-left: 30px;">如果测试没有问题，我们重新载入配置，让其生效</p>
+            <p style="margin-left: 60px;"># nginx -s reload</p>
+            <p style="margin-left: 30px;">生效后通过https的方式在浏览器访问域名就可以看到我们的站点启用SSL加密。&nbsp;</p>
+            <h4>四、访问http，自动跳转到https</h4>
+            <h5 style="margin-left: 30px;">方法一：使用url rewrite,将http的访问重定向至https</h5>
+            <p style="margin-left: 60px;">server {<br />　　listen 80;<br />　　server_name www.域名.com;<br />　　rewrite ^(.*) https://$server_name$1 permanent;<br />}<br />server {<br />　　listen 443;<br />　　server_name www.域名.com;<br />　　root /home/www;<br />　　ssl on;<br />　　ssl_certificate      /usr/certs/cert.crt;<br />　　ssl_certificate_key  /usr/certs/private.key;<br />}</p>
+            <h5 style="margin-left: 30px;">方法二：使用HSTS（HTTP Strict Transport Security）</h5>
+            <p style="margin-left: 60px;">使用方法一主要有两个缺点：</p>
+            <p style="margin-left: 90px;">1.不安全，rewrite使用的是302跳转来实现的，302跳转会暴露用户访问的站点路径和query string,易被劫持。</p>
+            <p style="margin-left: 90px;">2.多增加一次访问，访问会显得更慢一点。</p>
+            <p style="margin-left: 60px;">基于以上缺点HSTS诞生了，HTSP 就是添加 header 头（add_header Strict-Transport-Security max-age=15768000;includeSubDomains），告诉浏览器网站使用 HTTPS 访问，支持HSTS的浏览器就会在后面的请求中直接切换到 HTTPS。在 Chrome 中会看到浏览器自己会有个 307 Internal Redirect 的内部重定向。在一段时间内也就是max-age定义的时间，不管用户输入 www.ztimage.com 还是&nbsp;<a href="http://www.liberalman.cn/">http://www.ztimage.com</a>&nbsp;，都会默认将请求内部跳转到<a href="https://www.liberalman.cn/">https://www.ztimage.com</a>&nbsp;。</p>
+            <p style="margin-left: 60px;">采用HSTS协议的网站将保证浏览器始终连接到该网站的HTTPS加密版本，不需要用户手动在URL地址栏中输入加密地址。</p>
+            <p style="margin-left: 60px;">该协议将帮助网站采用全局加密，用户看到的就是该网站的安全版本。</p>
+            <p style="margin-left: 60px;">在nginx中配置HSTS,仅需要在https的server站点添加如下头部：</p>
+            <p style="margin-left: 90px;">add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";</p>
+            <p style="margin-left: 60px;">这样当第一次以https方式访问我的网站，nginx则会告知客户端的浏览器，以后即便地址栏输入http，也要浏览器改成https来访问我的nginx服务器。</p>
+            <p>&nbsp;</p>
+        </div>
+    </div>
+    
+</body>
+</html>

@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>LEGainer - 免费在线申请SSL证书</title>
+    <meta name="description" content="在线申请SSL证书,SSL证书申请工具,Let's Encrypt证书申请,CA数字证书申请,免费SSL证书申请" />
+    <link rel="stylesheet" type="text/css" href="/css/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.1/dist/vue-resource.min.js"></script>
+</head>
+<body >
+    <div class="header">
+        <div class="header-container">
+            <span class="title"><a href="/" target="_self">LEGainer-免费在线申请SSL证书</a></span>
+            <div class="nav"><a href="/settings/nginx.html" target="_blank">Nginx设置证书方法</a></div>
+            <!--<div class="nav"><a href="#" target="_blank">Apache设置证书方法</a></div>
+            <div class="nav"><a href="#" target="_blank">IIS设置证书方法</a></div>-->
+            <div class="clear"></div>
+        </div>
+    </div>
+
+    <div class="container" v-cloak id="app">
+        <div v-if="wait" class="popContainer">
+            <div class="pop-image">
+                <div id="preloader_6">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="pop-message">{{message}}</span>
+            </div>
+        </div>
+        <div class="proccess">
+            <div class="proccess-nav" v-bind:class="{'proccess-active':step==1}">
+                第一步 填写申请信息
+            </div>
+            <div class="proccess-nav" v-bind:class="{'proccess-active':step==2}">
+                第二步 解析域名及验证
+            </div>
+            <div class="proccess-nav" v-bind:class="{'proccess-active':step==3}">
+                第三步 完成及下载证书
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div class="separation-line">
+
+        </div>
+
+        <!--step1-->
+        <div class="content" v-if="step==1">
+            <div class="alter-msg">
+                注意：本站申请的证书皆为Let's Encrypt发放，验证域名所有权时，需要域名解析。
+            </div>
+
+            <p>
+                <input type="text" v-model="domain" placeholder="请输入要申请证书的域名，支持通配符" class="input-area" />
+            </p>
+            <p>
+                <input type="button" value="下一步" class="btn" v-on:click="createOrder" />
+            </p>
+        </div>
+
+
+        <!--step2-->
+        <div class="content" v-if="step==2">
+            <div class="notice-msg">
+                注意：1.最晚要在48小时内解析完毕。2.解析完后等20分钟生效后再点验证。
+            </div>
+
+            <div class="content-msg">
+                请将 <span class="it-msg">{{order.ChallengeDomain}}</span>的 <span class="it-msg">TXT</span> DNS记录值解析为:<span class="it-msg">{{order.DnsTxtValue}}</span>
+            </div>
+            <div class="tips-msg">
+                <a href="/settings/dns.html" target="_blank">不会解析？点击查看DNS解析步骤</a>
+            </div>
+            <p>
+                <input type="button" value="验证" class="btn" v-on:click="generateCert" />
+            </p>
+        </div>
+        <!--step3-->
+        <div class="content" v-if="step==3">
+            <div class="success-title">
+                申请成功
+            </div>
+            <div class="success-notice">
+                注意：本站不存储您的证书文件，请尽快下载，超过48小时将清空缓存
+            </div>
+            <table class="success-info">
+                <tr>
+                    <td class="success_key">证书颁发商：</td>
+                    <td class="success_value">Let's Encrypt</td>
+                </tr>
+                <tr>
+                    <td class="success_key">域名：</td>
+                    <td class="success_value">{{cert.Domain}}</td>
+                </tr>
+                <tr>
+                    <td class="success_key">有效期：</td>
+                    <td class="success_value">3个月</td>
+                </tr>
+                <tr>
+                    <td colspan="2"><a v-bind:href="'/dc?sessionKey='+order.SessionKey"  target="_blank">点击下载证书文件</a></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span>Copyright © 2020. <a href="http://ztimage.com" target="_blank">ZTImage.com</a> All rights reserved. <script type="text/javascript" src="https://v1.cnzz.com/z_stat.php?id=1279557600&web_id=1279557600"></script></span>
+    </div>
+    <script type="text/javascript">
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: '正在生成验证信息...',
+                domain: '',
+                wait: false,
+                step: 1,
+                order: { Success: 1, Message: "", ChallengeDomain: "", DnsTxtValue: "", SessionKey: "" },
+                cert: { Success: 1, Message: "", Domain:""}
+            },
+            methods: {
+                createOrder: function () {
+                    
+                    this.domain = this.domain.trim();
+                    var reg = /^(\*\.)?([a-zA-Z0-9-]{1,61}\.){0,}[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](\.[a-zA-Z]{2,})+$/;
+                    if (this.domain=='' || !reg.test(this.domain)) {
+                        alert("填写的域名格式错误");
+                        return;
+                    }
+                    this.showMessage("正在生成验证信息");
+                    var self = this;
+                    self.$http.get('/co', { params: { domain: self.domain } }).then((response) => {
+                        var o = response.body;
+                        if (o.Success != 1) {
+                            alert(o.Message);
+                            
+                        }
+                        else {
+                            self.order= o;
+                            self.step = 2;
+                        }
+                        self.wait = false;
+                    }, (response) => {
+                            alert("出现错误，请联系我，qq:283965069");
+                            self.wait = false;
+                    });
+                },
+                generateCert: function () {
+                    this.showMessage("验证中。。。");
+                    var self = this;
+                    self.$http.get('/gc', { params: { sessionKey: self.order.SessionKey } }).then((response) => {
+                        var o = response.body;
+                        if (o.Success != 1) {
+                            alert(o.Message);
+                        }
+                        else {
+                            self.cert = o;
+                            self.step = 3;
+                        }
+                        self.wait = false;
+                    }, (response) => {
+                        alert("出现错误，请联系我，QQ:283965069");
+                        self.wait = false;
+                    });
+                },
+                showMessage: function (msg) {
+                    this.wait = true;
+                    this.message = msg;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
